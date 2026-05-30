@@ -1,46 +1,30 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel import Session, select
-from models.modelos import Permisos
-from database.connection import get_session
+from fastapi import APIRouter, Depends
 from schemas import permisos_schemas as ps # ps = permisos_schemas
 
+from routers.Services.services_permisos import create_permiso as cp # cp = create_permiso
+from routers.Services.services_permisos import read_permisos as rp # rp = read_permisos
+from routers.Services.services_permisos import update_permiso as up # up = update_permiso
+from routers.Services.services_permisos import delete_permiso as dp # dp = delete_permiso
+
+from sqlmodel import Session
+from database.connection import get_session
 from typing import Annotated
 sessionDep = Annotated[Session, Depends(get_session)]
 
+router = APIRouter(prefix="/permisos")
 
-router = APIRouter()
+@router.post("/", response_model=ps.PermisoRead)
+def create_permiso(session: sessionDep, payload: ps.PermisoCreate):
+    return cp(session = session, permiso_data = payload)
 
-@router.post("/permisos/", response_model=ps.PermisoCreate)
-def create_permiso(session: sessionDep, permiso_data: ps.PermisoCreate):
-    new_permiso = Permisos(descripcion=permiso_data.descripcion)
-    session.add(new_permiso)
-    session.commit()
-    session.refresh(new_permiso)
-    return new_permiso
-
-@router.get("/permisos/", response_model=list[ps.PermisoRead])
+@router.get("/", response_model=list[ps.PermisoRead])
 def read_permisos(session: sessionDep):
-    permisos = session.exec(select(Permisos).where(Permisos.is_active == True)).all()
-    return permisos
+    return rp(session = session)
 
-@router.put("/permisos/{permiso_id}", response_model=ps.PermisoUpdate)
-def update_permiso(permiso_id: int, session: sessionDep, permiso_data: ps.PermisoUpdate):
-    permiso = session.get(Permisos, permiso_id)
-    if not permiso or not permiso.is_active:
-        raise HTTPException(status_code=404, detail="Permiso no encontrado")
-    permiso.descripcion = permiso_data.descripcion
-    session.add(permiso)
-    session.commit()
-    session.refresh(permiso)
-    return permiso
+@router.put("/{permiso_id}", response_model=ps.PermisoRead)
+def update_permiso(permiso_id: int, session: sessionDep, payload: ps.PermisoUpdate):
+    return up(permiso_id = permiso_id, session = session, permiso_data = payload)
 
-@router.delete("/permisos/{permiso_id}", response_model=ps.PermisoDelete)
+@router.delete("/{permiso_id}", response_model=ps.PermisoDelete)
 def delete_permiso(permiso_id: int, session: sessionDep):
-    permiso = session.get(Permisos, permiso_id)
-    if not permiso or not permiso.is_active:
-        raise HTTPException(status_code=404, detail="Permiso no encontrado")
-    permiso.is_active = False
-    session.add(permiso)
-    session.commit()
-    session.refresh(permiso)
-    return {"mensaje": "El permiso ha sido desactivado exitosamente"}
+    return dp(permiso_id = permiso_id, session = session)

@@ -1,5 +1,5 @@
 from sqlmodel import Session, create_engine
-DATABASE_URL = "postgresql+psycopg://postgres:postgres@localhost:5432/colegio_santa_rosalia"
+DATABASE_URL = "postgresql+psycopg://postgres:colegio_santa_rosalia@colegio-postgres:5432/db_colegio_santa_rosalia"
 
 engine = create_engine(DATABASE_URL, echo=True)
 

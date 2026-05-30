@@ -1,0 +1,21 @@
+CREAR CONTENEDOR DE LA APP
+
+docker container run \
+--name santa_rosalia_app \
+--net colegio-net \
+--dns 8.8.8.8 \
+-p 8000:8000 \
+-v "$(pwd)":/app \
+python:3.11-slim \
+sh -c "cd /app && pip install -r requirements.txt && uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
+
+
+crear contenedor de la bd
+
+docker container run \
+--name colegio-postgres \
+--net colegio-net \
+-e POSTGRES_PASSWORD=colegio_santa_rosalia \
+-e POSTGRES_DB=db_colegio_santa_rosalia \
+-p 5432:5432 \
+-d postgres:15-alpine

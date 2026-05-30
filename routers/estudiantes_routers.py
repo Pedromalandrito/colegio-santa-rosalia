@@ -1,67 +1,30 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel import Session, select
-from models.modelos import Estudiantes
-from database.connection import get_session
+from fastapi import APIRouter, Depends
 from schemas import estudiantes_schemas as es # es = estudiantes_schemas
 
+from routers.Services.services_estudiantes import create_estudiante as ce # ce = create_estudiante
+from routers.Services.services_estudiantes import read_estudiantes as re # re = read_estudiantes
+from routers.Services.services_estudiantes import update_estudiante as ue # ue = update_estudiante
+from routers.Services.services_estudiantes import delete_estudiante as de # de = delete_estudiante
+
+from sqlmodel import Session
+from database.connection import get_session
 from typing import Annotated
 sessionDep = Annotated[Session, Depends(get_session)]
 
+router = APIRouter(prefix="/estudiantes")
 
-router = APIRouter()
+@router.post("/", response_model=es.EstudiantesRead)
+def create_estudiante(session: sessionDep, payload: es.EstudiantesCreate):
+    return ce(session = session, estudiante_data = payload)
 
-@router.post("/estudiantes", response_model=es.EstudiantesCreate)
-def create_estudiante(session: sessionDep, estudiante_data: es.EstudiantesCreate):
-    new_estudiante = Estudiantes(
-        cedula_estudiante=estudiante_data.cedula_estudiante,
-        nombre=estudiante_data.nombre,
-        apellido=estudiante_data.apellido,
-        fecha_nacimiento=estudiante_data.fecha_nacimiento,
-        anio=estudiante_data.anio,
-        seccion=estudiante_data.seccion,
-        representante_cedula=estudiante_data.representante_cedula
-    )
-    session.add(new_estudiante)
-    session.commit()
-    session.refresh(new_estudiante)
-    return new_estudiante
-
-@router.get("/estudiantes", response_model=list[es.EstudiantesRead])
+@router.get("/", response_model=list[es.EstudiantesRead])
 def read_estudiantes(session: sessionDep):
-    estudiantes = session.exec(select(Estudiantes).where(Estudiantes.is_active == True)).all()
-    return estudiantes
+    return re(session = session)
 
-@router.patch("/estudiantes/{cedula_estudiante}", response_model=es.EstudiantesUpdatePartial)
-def update_estudiante(session: sessionDep, cedula_estudiante: str, estudiante_data: es.EstudiantesUpdatePartial):
-    estudiante = session.get(Estudiantes, cedula_estudiante)
-    if not estudiante or not estudiante.is_active:
-        raise HTTPException(status_code=404, detail="Estudiante no encontrado")
-    campos_editables = {
-        "cedula_estudiante": estudiante_data.cedula_estudiante,
-        "nombre": estudiante_data.nombre,
-        "apellido": estudiante_data.apellido,
-        "fecha_nacimiento": estudiante_data.fecha_nacimiento,
-        "anio": estudiante_data.anio,
-        "seccion": estudiante_data.seccion,
-        "representante_cedula": estudiante_data.representante_cedula
-    }
+@router.patch("/{cedula_estudiante}", response_model=es.EstudiantesRead)
+def update_estudiante(cedula_estudiante: str, session: sessionDep, payload: es.EstudiantesUpdatePartial):
+    return ue(cedula_estudiante = cedula_estudiante, session = session, estudiante_data = payload)
 
-    for nombre_campo, valor in campos_editables.items():
-        setattr(estudiante, nombre_campo, valor)
-    
-    session.add(estudiante)
-    session.commit()
-    session.refresh(estudiante)
-    return estudiante
-
-@router.delete("/estudiantes/{cedula_estudiante}", response_model=es.EstudiantesDelete)
-def delete_estudiante(session: sessionDep, cedula_estudiante: str):
-    estudiante = session.get(Estudiantes, cedula_estudiante)
-    if not estudiante or not estudiante.is_active:
-        raise HTTPException(status_code=404, detail="Estudiante no encontrado")
-    
-    estudiante.is_active = False
-    session.add(estudiante)
-    session.commit()
-    session.refresh(estudiante)
-    return {"is_active": estudiante.is_active}
+@router.delete("/{cedula_estudiante}", response_model=es.EstudiantesDelete)
+def delete_estudiante(cedula_estudiante: str, session: sessionDep):
+    return de(cedula_estudiante = cedula_estudiante, session = session)
